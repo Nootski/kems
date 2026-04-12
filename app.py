@@ -11,11 +11,14 @@ from engine.sizing import estimate_pv_yield
 
 app = Flask(__name__)
 
-FEEDBACK_FILE = Path(os.environ.get(
-    "FEEDBACK_FILE",
-    Path(__file__).parent / "data" / "feedback.json",
+DATA_DIR = Path(os.environ.get(
+    "KEMS_DATA_DIR",
+    Path(__file__).parent / "data",
 ))
+FEEDBACK_FILE = DATA_DIR / "feedback.json"
+CALC_LOG_FILE = DATA_DIR / "calculations.jsonl"
 _fb_lock = threading.Lock()
+_log_lock = threading.Lock()
 
 
 def _read_feedback() -> list[dict]:
@@ -28,6 +31,27 @@ def _read_feedback() -> list[dict]:
 def _write_feedback(msgs: list[dict]):
     FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
     FEEDBACK_FILE.write_text(json.dumps(msgs, ensure_ascii=False, indent=2))
+
+
+def _log_calculation(inputs: dict, top_result: dict | None, source: str):
+    """Append a calculation to the log file (one JSON object per line)."""
+    entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "source": source,
+        "inputs": {k: v for k, v in inputs.items() if k != "space"},
+        "top_result": {
+            "brand": top_result["brand"],
+            "capacity_kwh": top_result["capacity_kwh"],
+            "inverter_kw": top_result["inverter_kw"],
+            "price_eur": top_result["price_eur"],
+            "annual_revenue": top_result["annual_revenue"],
+            "payback_years": top_result["payback_years"],
+        } if top_result else None,
+    }
+    with _log_lock:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        with open(CALC_LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 GOAL_LABELS = {
     "balanced": "Beste balans (rendement + autarkie)",
@@ -177,6 +201,7 @@ def calculate():
     inputs = _parse_inputs(request.form)
     configs = get_top_configs(inputs, n=10)
     config_dicts = _configs_to_dicts(configs)
+    _log_calculation(inputs, config_dicts[0] if config_dicts else None, "form")
 
     return render_template(
         "results.html",
@@ -192,6 +217,7 @@ def api_calculate():
     inputs = _parse_inputs(data)
     configs = get_top_configs(inputs, n=10)
     config_dicts = _configs_to_dicts(configs)
+    _log_calculation(inputs, config_dicts[0] if config_dicts else None, "api")
     return jsonify({
         "configs": config_dicts,
         "goal_label": GOAL_LABELS.get(inputs["goal"], inputs["goal"]),
@@ -201,6 +227,18 @@ def api_calculate():
             "goal": inputs["goal"],
         },
     })
+
+
+@app.route("/api/calculations", methods=["GET"])
+def get_calculations():
+    """Return recent calculation log entries."""
+    limit = request.args.get("limit", 50, type=int)
+    try:
+        lines = CALC_LOG_FILE.read_text().strip().split("\n")
+        entries = [json.loads(line) for line in lines[-limit:]]
+        return jsonify({"calculations": entries})
+    except (FileNotFoundError, json.JSONDecodeError):
+        return jsonify({"calculations": []})
 
 
 @app.route("/api/feedback", methods=["GET"])
