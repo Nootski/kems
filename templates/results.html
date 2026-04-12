@@ -60,15 +60,34 @@
                 <h5 class="card-title text-center">{{ cfg.brand }}</h5>
                 <div class="text-center mb-3">
                     <span class="badge bg-secondary">{{ cfg.coupling }}-coupled</span>
-                    {% if cfg.notstrom %}<span class="badge bg-success">Notstrom</span>{% endif %}
+                    {% if cfg.notstrom %}<span class="badge bg-success">Backup</span>{% endif %}
                     {% if cfg.three_phase %}<span class="badge bg-info">3-fase</span>{% endif %}
+                    {% if cfg.expandable %}<span class="badge bg-warning text-dark">Modulair</span>{% endif %}
                 </div>
                 <table class="table table-sm mb-3">
                     <tr><td class="text-body-secondary">Capaciteit</td><td class="fw-bold text-end">{{ cfg.capacity_kwh }} kWh</td></tr>
                     <tr><td class="text-body-secondary">Bruikbaar</td><td class="text-end">{{ cfg.usable_kwh }} kWh</td></tr>
                     <tr><td class="text-body-secondary">Omvormer</td><td class="fw-bold text-end">{{ cfg.inverter_kw }} kW</td></tr>
                     <tr><td class="text-body-secondary">Rendement</td><td class="text-end">{{ "%.0f"|format(cfg.efficiency * 100) }}%</td></tr>
+                    <tr><td class="text-body-secondary">Levensduur</td><td class="text-end">{{ "{:,}".format(cfg.cycle_life) }} cycli</td></tr>
                     <tr><td class="text-body-secondary">Garantie</td><td class="text-end">{{ cfg.warranty_years }} jaar</td></tr>
+                    <tr><td class="text-body-secondary">EMS</td><td class="text-end small">{{ cfg.ems }}</td></tr>
+                    <tr>
+                        <td class="text-body-secondary">Openheid</td>
+                        <td class="text-end">
+                            {% for i in range(5) %}
+                            <i class="bi bi-{% if i < cfg.integration_score %}star-fill text-warning{% else %}star text-body-secondary{% endif %} small"></i>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-body-secondary">Modulariteit</td>
+                        <td class="text-end">
+                            {% for i in range(5) %}
+                            <i class="bi bi-{% if i < cfg.modularity_score %}square-fill text-primary{% else %}square text-body-secondary{% endif %} small"></i>
+                            {% endfor %}
+                        </td>
+                    </tr>
                 </table>
                 <div class="text-center border-top pt-3">
                     <div class="fs-3 fw-bold text-primary">&euro;{{ "{:,.0f}".format(cfg.price_eur) }}</div>
@@ -136,6 +155,114 @@
             <div class="card-body d-flex align-items-center justify-content-center">
                 <canvas id="revenueChart" style="max-height: 300px;"></canvas>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Kernvariabelen vergelijking -->
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">10 Kernvariabelen &mdash; vergelijking top {{ configs[:3]|length }}</h5></div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="min-width:180px">Kernvariabele</th>
+                        {% for cfg in configs[:3] %}
+                        <th class="text-center{% if loop.first %} table-primary{% endif %}">{{ cfg.brand }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-medium">1. Capaciteit</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}">{{ cfg.capacity_kwh }} kWh <span class="text-body-secondary small">({{ cfg.usable_kwh }} bruikbaar)</span></td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">2. Vermogen (omvormer)</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}">{{ cfg.inverter_kw }} kW</td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">3. 3-fase</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}">
+                            {% if cfg.three_phase %}<i class="bi bi-check-circle-fill text-success"></i> Ja{% else %}<i class="bi bi-x-circle text-danger"></i> Nee{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">4. AC/DC koppeling</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}"><span class="badge bg-secondary">{{ cfg.coupling }}</span></td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">5. EMS</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center small{% if loop.first %} table-primary{% endif %}">
+                            <strong>{{ cfg.ems }}</strong><br>
+                            <span class="text-body-secondary">{{ cfg.ems_features | join(', ') }}</span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">6. Integratie / openheid</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}">
+                            {% for i in range(5) %}
+                            <i class="bi bi-{% if i < cfg.integration_score %}star-fill text-warning{% else %}star text-body-secondary{% endif %}"></i>
+                            {% endfor %}
+                            <br>
+                            <span class="text-body-secondary small">{{ cfg.integration_protocols | join(', ') }}</span>
+                            {% if cfg.integration_platforms %}
+                            <br><span class="text-body-secondary small">{{ cfg.integration_platforms | join(', ') }}</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">7. Levensduur</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}">
+                            <strong>{{ "{:,}".format(cfg.cycle_life) }}</strong> cycli<br>
+                            <span class="text-body-secondary small">{{ cfg.warranty_years }} jaar garantie</span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">8. Efficientie</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}">
+                            <strong>{{ "%.0f"|format(cfg.efficiency * 100) }}%</strong> round-trip
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">9. Modulariteit</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}">
+                            {% for i in range(5) %}
+                            <i class="bi bi-{% if i < cfg.modularity_score %}square-fill text-primary{% else %}square text-body-secondary{% endif %}"></i>
+                            {% endfor %}
+                            <br>
+                            <span class="text-body-secondary small">{% if cfg.expandable %}Uitbreidbaar{% else %}Niet uitbreidbaar{% endif %}</span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="fw-medium">10. Backup / off-grid</td>
+                        {% for cfg in configs[:3] %}
+                        <td class="text-center{% if loop.first %} table-primary{% endif %}">
+                            {% if cfg.notstrom %}<i class="bi bi-check-circle-fill text-success"></i> Notstrom{% else %}<i class="bi bi-x-circle text-danger"></i> Nee{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

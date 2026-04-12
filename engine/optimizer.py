@@ -35,6 +35,14 @@ class OptimizedConfig:
     notstrom: bool
     three_phase: bool
     warranty_years: int
+    cycle_life: int = 6000
+    expandable: bool = True
+    ems: str = ""
+    ems_features: list = field(default_factory=list)
+    integration_protocols: list = field(default_factory=list)
+    integration_platforms: list = field(default_factory=list)
+    integration_score: int = 1
+    modularity_score: int = 1
     score: float = 0
     within_recommendation: bool = True
     details: dict = field(default_factory=dict)
@@ -184,6 +192,14 @@ def optimize(inputs: dict) -> list[OptimizedConfig]:
             notstrom=cfg["notstrom"],
             three_phase=cfg["three_phase"],
             warranty_years=cfg["warranty_years"],
+            cycle_life=cfg.get("cycle_life", 6000),
+            expandable=cfg.get("expandable", False),
+            ems=cfg.get("ems", ""),
+            ems_features=cfg.get("ems_features", []),
+            integration_protocols=cfg.get("integration_protocols", []),
+            integration_platforms=cfg.get("integration_platforms", []),
+            integration_score=cfg.get("integration_score", 1),
+            modularity_score=cfg.get("modularity_score", 1),
             score=round(score, 2),
             within_recommendation=within_rec,
             details={
@@ -203,7 +219,11 @@ def _calc_score(
 ) -> float:
     """
     Compute a weighted score to rank configurations.
-    Higher = better.
+    Higher = better. Incorporates all 10 kernvariabelen:
+    1. Capaciteit, 2. Vermogen, 3. 3-fase, 4. AC/DC coupling
+    (filtered pre-score), 5. EMS, 6. Integratie/openheid,
+    7. Levensduur, 8. Efficientie, 9. Modulariteit, 10. Backup
+    (filtered pre-score).
     """
     if payback >= 999:
         return -1000
@@ -212,6 +232,9 @@ def _calc_score(
     revenue_score = annual_rev / 100
     rec_bonus = 15 if within_rec else 0
     efficiency_score = cfg["efficiency"] * 20
+    cycle_life_score = min(cfg.get("cycle_life", 6000) / 1000, 8) * 2
+    integration_score = cfg.get("integration_score", 1) * 3
+    modularity_score = cfg.get("modularity_score", 1) * 2
 
     if goal == "max_rendement":
         payback_score *= 2
@@ -224,7 +247,10 @@ def _calc_score(
         inverter_bonus = min(cfg["inverter_kw"] / 20, 1.5) * 20
         revenue_score += inverter_bonus
 
-    return payback_score + revenue_score + rec_bonus + efficiency_score
+    return (
+        payback_score + revenue_score + rec_bonus + efficiency_score
+        + cycle_life_score + integration_score + modularity_score
+    )
 
 
 def get_top_configs(inputs: dict, n: int = 3) -> list[OptimizedConfig]:
