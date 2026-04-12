@@ -246,6 +246,14 @@ function renderTopCards(){
             renderAll();
         });
     });
+    const allowList = {...bootstrap.Tooltip.Default.allowList};
+    allowList.table = [];
+    allowList.thead = [];
+    allowList.tbody = [];
+    allowList.tfoot = [];
+    allowList.tr = [];
+    allowList.th = ['class','style'];
+    allowList.td = ['class','style'];
     wrap.querySelectorAll('.rev-info').forEach(el=>{
         const idx=parseInt(el.dataset.idx);
         new bootstrap.Popover(el,{
@@ -253,6 +261,7 @@ function renderTopCards(){
             placement:'top',
             trigger:'hover focus',
             html:true,
+            allowList:allowList,
             title:`<strong>${allConfigs[idx].brand}</strong> — opbouw opbrengsten`,
             content:revPopoverContent(allConfigs[idx]),
             customClass:'rev-popover'
