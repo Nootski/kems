@@ -181,7 +181,7 @@ function renderRecAlert(){
     const c=allConfigs[0];if(!c||!c.details||!c.details.recommended_range){document.getElementById('recAlert').classList.add('d-none');return}
     document.getElementById('recAlert').classList.remove('d-none');
     const r=c.details.recommended_range;
-    document.getElementById('recText').innerHTML=`<strong>Aanbevolen accucapaciteit: ${r.min_kwh} &ndash; ${r.max_kwh} kWh</strong> (optimaal: ${r.optimal_kwh} kWh)<br><small class="text-body-secondary">Dagelijks PV-surplus: ~${r.daily_surplus_kwh} kWh &middot; Avondverbruik: ~${r.evening_consumption_kwh} kWh &middot; Piekverbruik: ${c.details.peak_kw} kW</small>`;
+    document.getElementById('recText').innerHTML=`<strong>Aanbevolen accucapaciteit: ${r.min_kwh} &ndash; ${r.max_kwh} kWh</strong> (optimaal: ${r.optimal_kwh} kWh)<br><small class="text-body-secondary">Gem. PV-surplus: ~${r.daily_surplus_kwh} kWh/dag &middot; Piekdag surplus: ~${r.peak_day_surplus_kwh||'?'} kWh &middot; Avondverbruik: ~${r.evening_consumption_kwh} kWh &middot; Piekverbruik: ${c.details.peak_kw} kW</small>`;
 }
 
 function cardHTML(cfg, idx){

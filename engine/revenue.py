@@ -5,7 +5,6 @@ now fully parametric based on battery size, inverter, and user inputs.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 
 
@@ -62,18 +61,34 @@ def _estimate_self_consumption_target(
 ) -> float:
     """
     Estimate achievable self-consumption with a battery.
-    Larger batteries increase self-consumption but with diminishing returns.
-    Based on empirical data: each kWh of usable storage adds ~0.5-1% SC
-    for a typical Dutch PV system, tapering off.
+
+    Uses a seasonal distribution model: surplus varies hugely across
+    the year. On peak summer days (100+ kWh production), even a large
+    battery fills up fast. In winter, there's almost no surplus.
+    The effective capture rate is the weighted average across seasons.
     """
     if pv_kwh_year <= 0:
         return base_sc
 
-    daily_surplus_kwh = pv_kwh_year * (1 - base_sc) / 365
-    capturable_fraction = min(1.0, usable_kwh / max(daily_surplus_kwh, 0.1))
-    max_improvement = 1.0 - base_sc
-    improvement = max_improvement * capturable_fraction * 0.75
-    return min(0.95, base_sc + improvement)
+    annual_surplus = pv_kwh_year * (1 - base_sc)
+
+    seasons = [
+        {"name": "winter", "share": 0.10, "peak_factor": 0.5},
+        {"name": "shoulder", "share": 0.35, "peak_factor": 1.0},
+        {"name": "summer_avg", "share": 0.35, "peak_factor": 1.8},
+        {"name": "summer_peak", "share": 0.20, "peak_factor": 3.5},
+    ]
+
+    total_captured = 0
+    for s in seasons:
+        seasonal_surplus_day = (annual_surplus * s["share"]) / (365 * s["share"]) * s["peak_factor"]
+        daily_capturable = min(usable_kwh, seasonal_surplus_day)
+        days = round(365 * s["share"])
+        total_captured += daily_capturable * days
+
+    total_captured = min(total_captured, annual_surplus)
+    new_sc = base_sc + (total_captured / pv_kwh_year)
+    return min(0.95, round(new_sc, 3))
 
 
 def _estimate_peak_kw(annual_kwh: float, large_consumers: list[dict] | None = None) -> float:
@@ -126,7 +141,6 @@ def calc_arbitrage(inp: RevenueInputs) -> RevenueResult:
         )
 
     kwh_per_cycle = min(inp.usable_kwh * 0.5, inp.usable_kwh)
-    pv_shift_days = 180 if inp.pv_kwh_year > 5000 else 90
     available_days = inp.arbitrage_days_per_year
     effective_cycles = max(0, available_days)
     annual = effective_cycles * kwh_per_cycle * inp.arbitrage_spread * inp.battery_efficiency

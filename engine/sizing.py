@@ -5,7 +5,6 @@ based on PV production, consumption profile, constraints, and goals.
 
 from __future__ import annotations
 
-import math
 
 
 def estimate_pv_yield(kwp: float, orientation: str, tilt: float = 35) -> float:
@@ -82,6 +81,19 @@ def daily_surplus_profile(pv_kwh_year: float, self_consumption_pct: float) -> fl
     return annual_surplus / 365
 
 
+def _peak_day_surplus(pv_kwh_year: float, self_consumption_pct: float) -> float:
+    """
+    Estimate surplus on a peak production day (sunny spring/summer).
+    In NL, peak days produce ~2.2x the annual daily average.
+    Direct self-consumption on peak days is lower (as % of production)
+    because production far exceeds momentary demand.
+    """
+    avg_daily = pv_kwh_year / 365
+    peak_daily = avg_daily * 2.2
+    sc_on_peak_day = self_consumption_pct * 0.4
+    return peak_daily * (1 - sc_on_peak_day)
+
+
 def recommended_capacity_range(
     pv_kwh_year: float,
     annual_consumption_kwh: float,
@@ -92,39 +104,53 @@ def recommended_capacity_range(
     """
     Calculate recommended battery capacity range.
 
-    Returns dict with min_kwh, optimal_kwh, max_kwh and reasoning.
+    Takes into account:
+    - Average AND peak-day PV surplus (not just average)
+    - Peak shaving capacity needs (sustained discharge at peak_kw)
+    - Evening/night consumption patterns
     """
     daily_surplus = daily_surplus_profile(pv_kwh_year, self_consumption_pct)
+    peak_surplus = _peak_day_surplus(pv_kwh_year, self_consumption_pct)
     daily_consumption = annual_consumption_kwh / 365
     evening_consumption = daily_consumption * 0.4
 
-    min_useful = max(3, round(daily_surplus * 0.5))
-    optimal_pv = round(daily_surplus * 1.2)
-    optimal_arb = round(evening_consumption * 0.6)
+    optimal_pv_avg = round(daily_surplus * 1.2)
+    optimal_pv_peak = round(peak_surplus * 0.6)
+    optimal_pv = max(optimal_pv_avg, optimal_pv_peak)
+
+    optimal_arb = round(evening_consumption * 0.8)
+
+    peak_shave_hours = 2.0
+    optimal_peak = round(peak_kw * peak_shave_hours * 0.5)
 
     if goal == "max_rendement":
-        optimal = min(optimal_pv, optimal_arb + 5)
+        optimal = max(optimal_pv_avg, optimal_arb + 5, optimal_peak)
     elif goal == "max_autarkie":
-        optimal = max(optimal_pv, optimal_arb) + 10
+        optimal = max(optimal_pv, optimal_arb, optimal_peak) + 10
     elif goal == "peak_shaving":
-        optimal = max(10, round(peak_kw * 1.5))
+        optimal = max(optimal_peak, round(peak_kw * 2.0))
     else:
-        optimal = round((optimal_pv + optimal_arb) / 2) + 5
+        optimal = max(
+            round((optimal_pv + optimal_arb) / 2) + 5,
+            optimal_peak,
+        )
 
-    min_kwh = max(5, min_useful)
+    min_kwh = max(5, round(daily_surplus * 0.7))
     optimal_kwh = max(min_kwh, optimal)
-    max_kwh = round(optimal_kwh * 1.8)
+    max_kwh = round(optimal_kwh * 1.4)
 
     return {
         "min_kwh": min_kwh,
         "optimal_kwh": optimal_kwh,
         "max_kwh": max_kwh,
         "daily_surplus_kwh": round(daily_surplus, 1),
+        "peak_day_surplus_kwh": round(peak_surplus, 1),
         "evening_consumption_kwh": round(evening_consumption, 1),
         "reasoning": {
-            "pv_based": optimal_pv,
+            "pv_based_avg": optimal_pv_avg,
+            "pv_based_peak": optimal_pv_peak,
             "consumption_based": optimal_arb,
-            "peak_based": round(peak_kw * 1.5),
+            "peak_shaving_based": optimal_peak,
         },
     }
 
