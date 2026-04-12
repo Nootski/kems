@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 
 from engine.optimizer import get_top_configs
 from engine.sizing import estimate_pv_yield
@@ -13,27 +13,30 @@ GOAL_LABELS = {
 }
 
 
-def _parse_form(form) -> dict:
-    """Parse the intake form into a dict suitable for the optimizer."""
+def _parse_inputs(data: dict) -> dict:
+    """Parse raw form/JSON data into optimizer inputs."""
 
     def _float(key, default=0.0):
         try:
-            return float(form.get(key, default))
+            return float(data.get(key, default))
         except (TypeError, ValueError):
             return default
 
     def _int(key, default=0):
         try:
-            return int(form.get(key, default))
+            return int(data.get(key, default))
         except (TypeError, ValueError):
             return default
 
     def _bool(key):
-        return form.get(key) in ("on", "true", "1", True)
+        v = data.get(key)
+        if isinstance(v, bool):
+            return v
+        return v in ("on", "true", "1", True)
 
     has_pv = _bool("has_pv")
     pv_kwp = _float("pv_kwp")
-    pv_orientation = form.get("pv_orientation", "east_west")
+    pv_orientation = data.get("pv_orientation", "east_west")
     pv_tilt = _float("pv_tilt", 35)
     pv_kwh_year = _float("pv_kwh_year")
 
@@ -46,14 +49,6 @@ def _parse_form(form) -> dict:
     if sc > 1:
         sc /= 100.0
 
-    extra_peak_kw = 0
-    if _bool("has_pool"):
-        extra_peak_kw += _float("pool_kw", 2)
-    if _bool("has_airco"):
-        extra_peak_kw += _float("airco_kw", 2.5)
-    if _bool("has_other"):
-        extra_peak_kw += _float("other_kw", 2)
-
     space = None
     sw = _float("space_width")
     sd = _float("space_depth")
@@ -65,17 +60,13 @@ def _parse_form(form) -> dict:
             "height": sh if sh > 0 else 9999,
         }
 
-    return {
-        "client_name": form.get("client_name", ""),
-        "address": form.get("address", ""),
-        "dwelling_type": form.get("dwelling_type", ""),
+    inputs = {
         "phases": _int("phases", 3),
-        "current_connection": form.get("current_connection", "3x35A"),
-        "netbeheerder": form.get("netbeheerder", "stedin"),
-        "contract_type": form.get("contract_type", "dynamic"),
+        "current_connection": data.get("current_connection", "3x35A"),
+        "netbeheerder": data.get("netbeheerder", "stedin"),
+        "contract_type": data.get("contract_type", "dynamic"),
         "purchase_price_kwh": _float("purchase_price_kwh", 0.21),
         "feedin_price_kwh": _float("feedin_price_kwh", 0.10),
-        "supplier": form.get("supplier", ""),
         "has_pv": has_pv,
         "pv_kwp": pv_kwp,
         "pv_orientation": pv_orientation,
@@ -91,12 +82,12 @@ def _parse_form(form) -> dict:
         "ev_battery_kwh": _float("ev_battery_kwh", 0),
         "has_v2h": _bool("has_v2h"),
         "has_induction": _bool("has_induction"),
-        "extra_peak_kw": extra_peak_kw,
+        "extra_peak_kw": 0,
         "budget": _float("budget", 25000),
-        "goal": form.get("goal", "balanced"),
+        "goal": data.get("goal", "balanced"),
         "space": space,
-        "placement": form.get("placement") or None,
-        "coupling_preference": form.get("coupling_preference", "any"),
+        "placement": data.get("placement") or None,
+        "coupling_preference": data.get("coupling_preference", "any"),
         "notstrom": _bool("notstrom"),
         "future_ev": _bool("future_ev"),
         "future_heat_pump": _bool("future_heat_pump"),
@@ -104,31 +95,22 @@ def _parse_form(form) -> dict:
         "future_v2h": _bool("future_v2h"),
     }
 
-
-@app.route("/")
-def index():
-    return render_template("intake.html")
-
-
-@app.route("/calculate", methods=["POST"])
-def calculate():
-    inputs = _parse_form(request.form)
-
-    if inputs.get("future_ev") and not inputs.get("has_ev"):
+    if inputs["future_ev"] and not inputs["has_ev"]:
         inputs["has_ev"] = True
-        inputs["ev_charger_kw"] = inputs.get("ev_charger_kw") or 11
-        inputs["extra_peak_kw"] = inputs.get("extra_peak_kw", 0) + 7.4
-    if inputs.get("future_heat_pump") and not inputs.get("has_heat_pump"):
+        inputs["ev_charger_kw"] = inputs["ev_charger_kw"] or 11
+        inputs["extra_peak_kw"] += 7.4
+    if inputs["future_heat_pump"] and not inputs["has_heat_pump"]:
         inputs["has_heat_pump"] = True
-        inputs["heat_pump_kw"] = inputs.get("heat_pump_kw") or 3.5
-    if inputs.get("future_pv") and inputs.get("pv_kwh_year", 0) > 0:
-        inputs["pv_kwh_year"] = inputs["pv_kwh_year"] * 1.3
+        inputs["heat_pump_kw"] = inputs["heat_pump_kw"] or 3.5
+    if inputs["future_pv"] and inputs["pv_kwh_year"] > 0:
+        inputs["pv_kwh_year"] *= 1.3
 
-    configs = get_top_configs(inputs, n=10)
+    return inputs
 
-    config_dicts = []
-    for c in configs:
-        config_dicts.append({
+
+def _configs_to_dicts(configs):
+    return [
+        {
             "product": c.product,
             "brand": c.brand,
             "capacity_kwh": c.capacity_kwh,
@@ -156,16 +138,45 @@ def calculate():
             "score": c.score,
             "within_recommendation": c.within_recommendation,
             "details": c.details,
-        })
+        }
+        for c in configs
+    ]
+
+
+@app.route("/")
+def index():
+    return render_template("intake.html")
+
+
+@app.route("/calculate", methods=["POST"])
+def calculate():
+    inputs = _parse_inputs(request.form)
+    configs = get_top_configs(inputs, n=10)
+    config_dicts = _configs_to_dicts(configs)
 
     return render_template(
         "results.html",
         configs=config_dicts,
-        client_name=inputs.get("client_name", ""),
+        inputs=inputs,
         goal_label=GOAL_LABELS.get(inputs["goal"], inputs["goal"]),
-        budget=inputs["budget"],
-        pv_kwh_year=inputs.get("pv_kwh_year", 0),
     )
+
+
+@app.route("/api/calculate", methods=["POST"])
+def api_calculate():
+    data = request.get_json(force=True)
+    inputs = _parse_inputs(data)
+    configs = get_top_configs(inputs, n=10)
+    config_dicts = _configs_to_dicts(configs)
+    return jsonify({
+        "configs": config_dicts,
+        "goal_label": GOAL_LABELS.get(inputs["goal"], inputs["goal"]),
+        "inputs": {
+            "pv_kwh_year": inputs["pv_kwh_year"],
+            "budget": inputs["budget"],
+            "goal": inputs["goal"],
+        },
+    })
 
 
 if __name__ == "__main__":
