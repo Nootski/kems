@@ -1,4 +1,8 @@
+import json
+import os
+import threading
 from datetime import datetime, timezone
+from pathlib import Path
 
 from flask import Flask, render_template, request, jsonify
 
@@ -7,7 +11,19 @@ from engine.sizing import estimate_pv_yield
 
 app = Flask(__name__)
 
-feedback_messages: list[dict] = []
+FEEDBACK_FILE = Path(os.environ.get("FEEDBACK_FILE", "/tmp/kems_feedback.json"))
+_fb_lock = threading.Lock()
+
+
+def _read_feedback() -> list[dict]:
+    try:
+        return json.loads(FEEDBACK_FILE.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def _write_feedback(msgs: list[dict]):
+    FEEDBACK_FILE.write_text(json.dumps(msgs, ensure_ascii=False))
 
 GOAL_LABELS = {
     "balanced": "Beste balans (rendement + autarkie)",
@@ -186,7 +202,8 @@ def api_calculate():
 @app.route("/api/feedback", methods=["GET"])
 def get_feedback():
     since_id = request.args.get("since_id", 0, type=int)
-    new_msgs = [m for m in feedback_messages if m["id"] > since_id]
+    msgs = _read_feedback()
+    new_msgs = [m for m in msgs if m["id"] > since_id]
     return jsonify({"messages": new_msgs})
 
 
@@ -198,32 +215,37 @@ def post_feedback():
     page = (data.get("page") or "").strip()
     if not text:
         return jsonify({"error": "Lege feedback"}), 400
-    msg = {
-        "id": len(feedback_messages) + 1,
-        "author": author,
-        "text": text,
-        "page": page,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    feedback_messages.append(msg)
+    with _fb_lock:
+        msgs = _read_feedback()
+        msg = {
+            "id": (msgs[-1]["id"] if msgs else 0) + 1,
+            "author": author,
+            "text": text,
+            "page": page,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        msgs.append(msg)
+        _write_feedback(msgs)
     return jsonify(msg), 201
 
 
 @app.route("/api/feedback/reply", methods=["POST"])
 def reply_feedback():
-    """Developer reply endpoint (used from Cursor polling)."""
     data = request.get_json(force=True)
     text = (data.get("text") or "").strip()
     if not text:
         return jsonify({"error": "Lege reply"}), 400
-    msg = {
-        "id": len(feedback_messages) + 1,
-        "author": "Ontwikkelaar",
-        "text": text,
-        "page": "",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    feedback_messages.append(msg)
+    with _fb_lock:
+        msgs = _read_feedback()
+        msg = {
+            "id": (msgs[-1]["id"] if msgs else 0) + 1,
+            "author": "Ontwikkelaar",
+            "text": text,
+            "page": "",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        msgs.append(msg)
+        _write_feedback(msgs)
     return jsonify(msg), 201
 
 
