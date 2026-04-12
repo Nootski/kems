@@ -1,9 +1,13 @@
+from datetime import datetime, timezone
+
 from flask import Flask, render_template, request, jsonify
 
 from engine.optimizer import get_top_configs
 from engine.sizing import estimate_pv_yield
 
 app = Flask(__name__)
+
+feedback_messages: list[dict] = []
 
 GOAL_LABELS = {
     "balanced": "Beste balans (rendement + autarkie)",
@@ -177,6 +181,50 @@ def api_calculate():
             "goal": inputs["goal"],
         },
     })
+
+
+@app.route("/api/feedback", methods=["GET"])
+def get_feedback():
+    since_id = request.args.get("since_id", 0, type=int)
+    new_msgs = [m for m in feedback_messages if m["id"] > since_id]
+    return jsonify({"messages": new_msgs})
+
+
+@app.route("/api/feedback", methods=["POST"])
+def post_feedback():
+    data = request.get_json(force=True)
+    text = (data.get("text") or "").strip()
+    author = (data.get("author") or "Gebruiker").strip()
+    page = (data.get("page") or "").strip()
+    if not text:
+        return jsonify({"error": "Lege feedback"}), 400
+    msg = {
+        "id": len(feedback_messages) + 1,
+        "author": author,
+        "text": text,
+        "page": page,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    feedback_messages.append(msg)
+    return jsonify(msg), 201
+
+
+@app.route("/api/feedback/reply", methods=["POST"])
+def reply_feedback():
+    """Developer reply endpoint (used from Cursor polling)."""
+    data = request.get_json(force=True)
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "Lege reply"}), 400
+    msg = {
+        "id": len(feedback_messages) + 1,
+        "author": "Ontwikkelaar",
+        "text": text,
+        "page": "",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    feedback_messages.append(msg)
+    return jsonify(msg), 201
 
 
 if __name__ == "__main__":
