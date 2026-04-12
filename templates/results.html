@@ -6,7 +6,9 @@
 .cfg-card{cursor:pointer;transition:border-color .2s,box-shadow .2s}
 .cfg-card:hover,.cfg-card.active{box-shadow:0 0 0 .2rem rgba(13,110,253,.25)}
 .cfg-card.active{border-color:var(--bs-primary)!important}
-.info-btn{position:absolute;top:.5rem;right:.5rem;z-index:2}
+.rev-popover{max-width:320px}
+.rev-popover .popover-body{padding:.5rem .75rem}
+.rev-info:hover{color:var(--bs-primary)!important}
 .param-group label{font-size:.8rem;margin-bottom:0}
 .param-group input,.param-group select{font-size:.85rem}
 .param-group .form-range{height:1.2rem}
@@ -186,14 +188,9 @@ function cardHTML(cfg, idx){
     const isActive = idx===selectedIdx;
     const headerCls = isActive?'bg-primary text-white':'';
     const headerText = idx===0?'<i class="bi bi-trophy"></i> Aanbevolen':`Alternatief ${idx+1}`;
-    const rb = cfg.revenue_breakdown;
-    const rbHTML = rb.map(r=>`<tr><td class="small">${r.name}</td><td class="text-end small fw-bold ${r.enabled?'text-success':''}">&euro;${fmt(r.annual_eur)}</td></tr>`).join('');
     return `
     <div class="col-lg-4">
         <div class="card h-100 cfg-card ${isActive?'active border-primary':''}" data-idx="${idx}" style="position:relative">
-            <button class="btn btn-sm btn-light info-btn rounded-circle" type="button" data-bs-toggle="popover" data-bs-html="true" data-bs-trigger="focus" title="${cfg.brand} ${cfg.capacity_kwh} kWh berekening" data-bs-content="<table class='table table-sm table-borderless mb-0'>${rbHTML}<tr class='border-top'><td class='fw-bold'>Totaal</td><td class='text-end fw-bold text-success'>&euro;${fmt(cfg.annual_revenue)}/jr</td></tr></table><hr class='my-1'><small>Investering: &euro;${fmt(cfg.price_eur)}<br>TVT: ${cfg.payback_years} jaar<br>Score: ${cfg.score}</small>">
-                <i class="bi bi-info-circle"></i>
-            </button>
             <div class="card-header ${headerCls} text-center fw-bold">${headerText}</div>
             <div class="card-body">
                 <h5 class="card-title text-center">${cfg.brand}</h5>
@@ -219,8 +216,8 @@ function cardHTML(cfg, idx){
                     <div class="text-body-secondary small">excl. BTW</div>
                 </div>
                 <div class="row text-center mt-3 pt-3 border-top">
-                    <div class="col-6">
-                        <div class="fs-5 fw-bold text-success">&euro;${fmt(cfg.annual_revenue)}</div>
+                    <div class="col-6 position-relative">
+                        <div class="fs-5 fw-bold text-success">&euro;${fmt(cfg.annual_revenue)} <i class="bi bi-info-circle-fill small text-body-secondary rev-info" data-idx="${idx}" style="cursor:help;font-size:.7rem"></i></div>
                         <div class="text-body-secondary small">per jaar</div>
                     </div>
                     <div class="col-6">
@@ -233,17 +230,34 @@ function cardHTML(cfg, idx){
     </div>`;
 }
 
+function revPopoverContent(cfg){
+    const rb=cfg.revenue_breakdown;
+    let rows=rb.map(r=>`<tr class="${r.enabled?'':'text-body-secondary'}"><td style="white-space:nowrap">${r.name}</td><td class="text-end fw-bold ps-3 ${r.enabled?'text-success':''}">&euro;${fmt(r.annual_eur)}</td></tr>`).join('');
+    return `<table class="table table-sm table-borderless mb-0" style="font-size:.82rem">${rows}<tr class="border-top"><td class="fw-bold">Totaal</td><td class="text-end fw-bold text-success ps-3">&euro;${fmt(cfg.annual_revenue)}/jr</td></tr></table>`;
+}
+
 function renderTopCards(){
     const wrap=document.getElementById('topCards');
     wrap.innerHTML=allConfigs.slice(0,3).map((c,i)=>cardHTML(c,i)).join('');
     wrap.querySelectorAll('.cfg-card').forEach(card=>{
         card.addEventListener('click',function(e){
-            if(e.target.closest('.info-btn'))return;
+            if(e.target.closest('.rev-info'))return;
             selectedIdx=parseInt(this.dataset.idx);
             renderAll();
         });
     });
-    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el=>new bootstrap.Popover(el,{container:'body',placement:'left'}));
+    wrap.querySelectorAll('.rev-info').forEach(el=>{
+        const idx=parseInt(el.dataset.idx);
+        new bootstrap.Popover(el,{
+            container:'body',
+            placement:'top',
+            trigger:'hover focus',
+            html:true,
+            title:`<strong>${allConfigs[idx].brand}</strong> — opbouw opbrengsten`,
+            content:revPopoverContent(allConfigs[idx]),
+            customClass:'rev-popover'
+        });
+    });
 }
 
 function renderRevenue(idx){
