@@ -11,7 +11,10 @@ from engine.sizing import estimate_pv_yield
 
 app = Flask(__name__)
 
-FEEDBACK_FILE = Path(os.environ.get("FEEDBACK_FILE", "/tmp/kems_feedback.json"))
+FEEDBACK_FILE = Path(os.environ.get(
+    "FEEDBACK_FILE",
+    Path(__file__).parent / "data" / "feedback.json",
+))
 _fb_lock = threading.Lock()
 
 
@@ -23,7 +26,8 @@ def _read_feedback() -> list[dict]:
 
 
 def _write_feedback(msgs: list[dict]):
-    FEEDBACK_FILE.write_text(json.dumps(msgs, ensure_ascii=False))
+    FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    FEEDBACK_FILE.write_text(json.dumps(msgs, ensure_ascii=False, indent=2))
 
 GOAL_LABELS = {
     "balanced": "Beste balans (rendement + autarkie)",
