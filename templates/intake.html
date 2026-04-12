@@ -7,70 +7,41 @@
     <div class="col-lg-8">
         <div class="mb-4">
             <h2>Thuisaccu Configuratie Intake</h2>
-            <p class="text-body-secondary">Vul de gegevens in om de optimale accuconfiguratie te berekenen. Alle velden met <span class="text-danger">*</span> zijn verplicht.</p>
+            <p class="text-body-secondary">Vul de gegevens in om de optimale accuconfiguratie te berekenen.</p>
         </div>
 
         <!-- Progress -->
         <div class="mb-4">
             <div class="d-flex justify-content-between mb-1 small fw-medium" id="stepLabels">
-                <span class="step-label active" data-step="1">1. Basis</span>
-                <span class="step-label" data-step="2">2. Aansluiting</span>
-                <span class="step-label" data-step="3">3. Zonnepanelen</span>
-                <span class="step-label" data-step="4">4. Verbruik</span>
-                <span class="step-label" data-step="5">5. Wensen</span>
-                <span class="step-label" data-step="6">6. Toekomst</span>
+                <span class="step-label active" data-step="1">1. Aansluiting</span>
+                <span class="step-label" data-step="2">2. Zonnepanelen</span>
+                <span class="step-label" data-step="3">3. Verbruik</span>
+                <span class="step-label" data-step="4">4. Wensen</span>
+                <span class="step-label" data-step="5">5. Toekomst</span>
             </div>
             <div class="progress" style="height: 6px;">
-                <div class="progress-bar" id="progressBar" style="width: 16.66%"></div>
+                <div class="progress-bar" id="progressBar" style="width: 20%"></div>
             </div>
         </div>
 
         <form id="intakeForm" method="POST" action="/calculate">
 
-            <!-- STEP 1: Basisgegevens -->
+            <!-- STEP 1: Elektriciteitsaansluiting -->
             <div class="wizard-step" data-step="1">
-                <div class="card">
-                    <div class="card-header"><h5 class="mb-0"><i class="bi bi-house-door"></i> Basisgegevens</h5></div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="client_name" class="form-label">Naam klant / project</label>
-                            <input type="text" class="form-control" id="client_name" name="client_name" placeholder="Bijv. Familie Jansen">
-                        </div>
-                        <div class="mb-3">
-                            <label for="address" class="form-label">Adres / postcode</label>
-                            <input type="text" class="form-control" id="address" name="address" placeholder="1234 AB Amsterdam">
-                        </div>
-                        <div class="mb-3">
-                            <label for="dwelling_type" class="form-label">Type woning</label>
-                            <select class="form-select" id="dwelling_type" name="dwelling_type">
-                                <option value="vrijstaand">Vrijstaand</option>
-                                <option value="2onder1kap">2-onder-1-kap</option>
-                                <option value="hoekwoning">Hoekwoning</option>
-                                <option value="tussenwoning" selected>Tussenwoning</option>
-                                <option value="appartement">Appartement</option>
-                                <option value="bedrijfspand">Bedrijfspand</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- STEP 2: Elektriciteitsaansluiting -->
-            <div class="wizard-step d-none" data-step="2">
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0"><i class="bi bi-plug"></i> Elektriciteitsaansluiting</h5></div>
                     <div class="card-body">
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="phases" class="form-label">Aantal fasen <span class="text-danger">*</span></label>
-                                <select class="form-select" id="phases" name="phases" required>
+                                <label for="phases" class="form-label">Aantal fasen</label>
+                                <select class="form-select" id="phases" name="phases">
                                     <option value="1">1-fase</option>
                                     <option value="3" selected>3-fase</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="current_connection" class="form-label">Huidige aansluiting <span class="text-danger">*</span></label>
-                                <select class="form-select" id="current_connection" name="current_connection" required>
+                                <label for="current_connection" class="form-label">Huidige aansluiting</label>
+                                <select class="form-select" id="current_connection" name="current_connection">
                                     <option value="1x25A">1x25A</option>
                                     <option value="3x25A">3x25A</option>
                                     <option value="3x35A" selected>3x35A</option>
@@ -83,17 +54,17 @@
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="netbeheerder" class="form-label">Netbeheerder <span class="text-danger">*</span></label>
-                                <select class="form-select" id="netbeheerder" name="netbeheerder" required>
+                                <label for="netbeheerder" class="form-label">Netbeheerder</label>
+                                <select class="form-select" id="netbeheerder" name="netbeheerder">
                                     <option value="stedin" selected>Stedin</option>
                                     <option value="liander">Liander</option>
                                     <option value="enexis">Enexis</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="contract_type" class="form-label">Type energiecontract <span class="text-danger">*</span></label>
-                                <select class="form-select" id="contract_type" name="contract_type" required>
-                                    <option value="dynamic" selected>Dynamisch (bijv. Tibber, ANWB Energie)</option>
+                                <label for="contract_type" class="form-label">Type energiecontract</label>
+                                <select class="form-select" id="contract_type" name="contract_type">
+                                    <option value="dynamic" selected>Dynamisch (Tibber, ANWB Energie, ...)</option>
                                     <option value="variable">Variabel</option>
                                     <option value="fixed">Vast</option>
                                 </select>
@@ -109,16 +80,12 @@
                                 <input type="number" class="form-control" id="feedin_price_kwh" name="feedin_price_kwh" value="0.10" step="0.01" min="0">
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="supplier" class="form-label">Energieleverancier</label>
-                            <input type="text" class="form-control" id="supplier" name="supplier" placeholder="Bijv. Tibber, Eneco, Vattenfall">
-                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- STEP 3: PV-installatie -->
-            <div class="wizard-step d-none" data-step="3">
+            <!-- STEP 2: PV-installatie -->
+            <div class="wizard-step d-none" data-step="2">
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0"><i class="bi bi-sun"></i> Zonnepanelen (PV)</h5></div>
                     <div class="card-body">
@@ -131,7 +98,7 @@
                         <div id="pvDetails">
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="pv_kwp" class="form-label">Vermogen (kWp) <span class="text-danger">*</span></label>
+                                    <label for="pv_kwp" class="form-label">Vermogen (kWp)</label>
                                     <input type="number" class="form-control" id="pv_kwp" name="pv_kwp" value="20" step="0.1" min="0">
                                 </div>
                                 <div class="col-md-6">
@@ -153,151 +120,77 @@
                                     <input type="number" class="form-control" id="pv_tilt" name="pv_tilt" value="35" min="0" max="90">
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="pv_inverter_type" class="form-label">Type omvormer</label>
-                                    <select class="form-select" id="pv_inverter_type" name="pv_inverter_type">
-                                        <option value="string" selected>String omvormer</option>
-                                        <option value="micro">Micro-omvormers</option>
-                                        <option value="hybrid">Hybride omvormer</option>
-                                    </select>
+                                    <label for="pv_kwh_year" class="form-label">Jaaropbrengst (kWh) <small class="text-body-secondary">— 0 = auto</small></label>
+                                    <input type="number" class="form-control" id="pv_kwh_year" name="pv_kwh_year" value="0" min="0">
                                 </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="pv_kwh_year" class="form-label">Jaaropbrengst (kWh) <small class="text-body-secondary">— laat 0 voor automatische schatting</small></label>
-                                <input type="number" class="form-control" id="pv_kwh_year" name="pv_kwh_year" value="0" min="0">
-                                <div class="form-text" id="pvEstimate"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- STEP 4: Verbruiksprofiel -->
-            <div class="wizard-step d-none" data-step="4">
+            <!-- STEP 3: Verbruiksprofiel -->
+            <div class="wizard-step d-none" data-step="3">
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Verbruiksprofiel</h5></div>
                     <div class="card-body">
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="annual_consumption_kwh" class="form-label">Jaarverbruik (kWh) <span class="text-danger">*</span></label>
+                                <label for="annual_consumption_kwh" class="form-label">Jaarverbruik (kWh)</label>
                                 <input type="number" class="form-control" id="annual_consumption_kwh" name="annual_consumption_kwh" value="8000" min="0" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="peak_kw" class="form-label">Piekverbruik (kW) <small class="text-body-secondary">— 0 = automatisch schatten</small></label>
-                                <input type="number" class="form-control" id="peak_kw" name="peak_kw" value="0" step="0.1" min="0">
+                                <label for="self_consumption_pct" class="form-label">Huidig eigenverbruik (%) <small class="text-body-secondary">— 0 = auto</small></label>
+                                <input type="number" class="form-control" id="self_consumption_pct" name="self_consumption_pct" value="33" min="0" max="100">
                             </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="self_consumption_pct" class="form-label">Huidig eigenverbruik (%) <small class="text-body-secondary">— 0 = automatisch</small></label>
-                                <input type="number" class="form-control" id="self_consumption_pct" name="self_consumption_pct" value="33" min="0" max="100">
+                                <label for="peak_kw" class="form-label">Piekverbruik (kW) <small class="text-body-secondary">— 0 = auto</small></label>
+                                <input type="number" class="form-control" id="peak_kw" name="peak_kw" value="0" step="0.1" min="0">
                             </div>
                         </div>
-
-                        <h6 class="mt-4 mb-3">Grootverbruikers</h6>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-body p-3">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input consumer-toggle" type="checkbox" id="has_heat_pump" name="has_heat_pump" data-target="heatPumpDetails">
-                                            <label class="form-check-label fw-medium" for="has_heat_pump"><i class="bi bi-thermometer-half"></i> Warmtepomp</label>
-                                        </div>
-                                        <div id="heatPumpDetails" class="d-none">
-                                            <select class="form-select form-select-sm mb-2" name="heat_pump_type">
-                                                <option value="lucht_water">Lucht-water</option>
-                                                <option value="grond">Grond (bodem)</option>
-                                                <option value="lucht_lucht">Lucht-lucht (airco)</option>
-                                                <option value="hybride">Hybride</option>
-                                            </select>
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" class="form-control" name="heat_pump_kw" placeholder="Vermogen" step="0.1" value="3.5">
-                                                <span class="input-group-text">kW</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                        <h6 class="mt-4 mb-3">Aanwezige installaties</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="has_heat_pump" name="has_heat_pump">
+                                    <label class="form-check-label" for="has_heat_pump">Warmtepomp</label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-body p-3">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input" type="checkbox" id="has_induction" name="has_induction">
-                                            <label class="form-check-label fw-medium" for="has_induction"><i class="bi bi-fire"></i> Inductie kookplaat</label>
-                                        </div>
-                                    </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="has_induction" name="has_induction">
+                                    <label class="form-check-label" for="has_induction">Inductie kookplaat</label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-body p-3">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input consumer-toggle" type="checkbox" id="has_ev" name="has_ev" data-target="evDetails">
-                                            <label class="form-check-label fw-medium" for="has_ev"><i class="bi bi-ev-front"></i> Elektrische auto + thuislader</label>
-                                        </div>
-                                        <div id="evDetails" class="d-none">
-                                            <input type="text" class="form-control form-control-sm mb-2" name="ev_model" placeholder="Merk/model (bijv. Volvo EX90)">
-                                            <div class="input-group input-group-sm mb-2">
-                                                <input type="number" class="form-control" name="ev_battery_kwh" placeholder="Accu" value="75" step="1">
-                                                <span class="input-group-text">kWh</span>
-                                            </div>
-                                            <div class="input-group input-group-sm mb-2">
-                                                <input type="number" class="form-control" name="ev_charger_kw" placeholder="Lader" value="11" step="0.1">
-                                                <span class="input-group-text">kW</span>
-                                            </div>
-                                            <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="has_v2h" name="has_v2h">
-                                                <label class="form-check-label small" for="has_v2h">V2H / V2G capable</label>
-                                            </div>
-                                        </div>
-                                    </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="has_ev" name="has_ev">
+                                    <label class="form-check-label" for="has_ev">EV + thuislader</label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-body p-3">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input consumer-toggle" type="checkbox" id="has_pool" name="has_pool" data-target="poolDetails">
-                                            <label class="form-check-label fw-medium" for="has_pool"><i class="bi bi-water"></i> Zwembad / jacuzzi</label>
-                                        </div>
-                                        <div id="poolDetails" class="d-none">
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" class="form-control" name="pool_kw" placeholder="Vermogen pomp" value="2" step="0.1">
-                                                <span class="input-group-text">kW</span>
-                                            </div>
-                                        </div>
+                        </div>
+                        <div id="evDetails" class="d-none">
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-4">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Accu EV</span>
+                                        <input type="number" class="form-control" name="ev_battery_kwh" value="75" step="1">
+                                        <span class="input-group-text">kWh</span>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-body p-3">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input consumer-toggle" type="checkbox" id="has_airco" name="has_airco" data-target="aircoDetails">
-                                            <label class="form-check-label fw-medium" for="has_airco"><i class="bi bi-snow"></i> Airconditioning</label>
-                                        </div>
-                                        <div id="aircoDetails" class="d-none">
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" class="form-control" name="airco_kw" placeholder="Vermogen" value="2.5" step="0.1">
-                                                <span class="input-group-text">kW</span>
-                                            </div>
-                                        </div>
+                                <div class="col-md-4">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Lader</span>
+                                        <input type="number" class="form-control" name="ev_charger_kw" value="11" step="0.1">
+                                        <span class="input-group-text">kW</span>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card h-100">
-                                    <div class="card-body p-3">
-                                        <div class="form-check form-switch mb-2">
-                                            <input class="form-check-input consumer-toggle" type="checkbox" id="has_other" name="has_other" data-target="otherDetails">
-                                            <label class="form-check-label fw-medium" for="has_other"><i class="bi bi-three-dots"></i> Overig</label>
-                                        </div>
-                                        <div id="otherDetails" class="d-none">
-                                            <input type="text" class="form-control form-control-sm mb-2" name="other_description" placeholder="Omschrijving (bijv. sauna, server)">
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" class="form-control" name="other_kw" placeholder="Vermogen" value="2" step="0.1">
-                                                <span class="input-group-text">kW</span>
-                                            </div>
-                                        </div>
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch mt-1">
+                                        <input class="form-check-input" type="checkbox" id="has_v2h" name="has_v2h">
+                                        <label class="form-check-label small" for="has_v2h">V2H / V2G capable</label>
                                     </div>
                                 </div>
                             </div>
@@ -306,8 +199,8 @@
                 </div>
             </div>
 
-            <!-- STEP 5: Wensen en randvoorwaarden -->
-            <div class="wizard-step d-none" data-step="5">
+            <!-- STEP 4: Wensen en randvoorwaarden -->
+            <div class="wizard-step d-none" data-step="4">
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0"><i class="bi bi-sliders"></i> Wensen &amp; Randvoorwaarden</h5></div>
                     <div class="card-body">
@@ -320,8 +213,8 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label for="goal" class="form-label">Primair doel <span class="text-danger">*</span></label>
-                                <select class="form-select" id="goal" name="goal" required>
+                                <label for="goal" class="form-label">Primair doel</label>
+                                <select class="form-select" id="goal" name="goal">
                                     <option value="balanced" selected>Beste balans (rendement + autarkie)</option>
                                     <option value="max_rendement">Maximaal financieel rendement (kortste TVT)</option>
                                     <option value="max_autarkie">Maximale zelfvoorzienendheid</option>
@@ -362,20 +255,16 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="notstrom" name="notstrom">
-                                    <label class="form-check-label fw-medium" for="notstrom">Notstrom / noodstroom gewenst</label>
-                                </div>
-                            </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="notstrom" name="notstrom">
+                            <label class="form-check-label fw-medium" for="notstrom">Notstrom / noodstroom gewenst</label>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- STEP 6: Toekomstplannen -->
-            <div class="wizard-step d-none" data-step="6">
+            <!-- STEP 5: Toekomstplannen -->
+            <div class="wizard-step d-none" data-step="5">
                 <div class="card">
                     <div class="card-header"><h5 class="mb-0"><i class="bi bi-rocket-takeoff"></i> Toekomstplannen</h5></div>
                     <div class="card-body">
@@ -466,12 +355,11 @@
     btnNext.addEventListener('click', () => { if (current < totalSteps) showStep(current + 1); });
     btnPrev.addEventListener('click', () => { if (current > 1) showStep(current - 1); });
 
-    // Consumer toggles
-    document.querySelectorAll('.consumer-toggle').forEach(tog => {
-        tog.addEventListener('change', function() {
-            const target = document.getElementById(this.dataset.target);
-            if (target) target.classList.toggle('d-none', !this.checked);
-        });
+    // EV toggle
+    const evToggle = document.getElementById('has_ev');
+    const evDetails = document.getElementById('evDetails');
+    evToggle.addEventListener('change', function() {
+        evDetails.classList.toggle('d-none', !this.checked);
     });
 
     // PV toggle
