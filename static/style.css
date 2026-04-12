@@ -12,6 +12,7 @@ main {
     flex: 1;
 }
 
+/* Intake wizard */
 .step-label {
     color: var(--bs-secondary-color);
     transition: color .2s;
@@ -40,6 +41,7 @@ main {
     color: var(--kems-primary);
 }
 
+/* Tables */
 .table th {
     font-weight: 600;
     font-size: .875rem;
@@ -50,6 +52,25 @@ main {
 
 .card.border-primary .card-header {
     border-bottom-color: var(--kems-primary);
+}
+
+/* Dashboard sidebar scrollbar */
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--bs-border-color);
+    border-radius: 2px;
+}
+
+#cfgList::-webkit-scrollbar {
+    width: 4px;
+}
+
+#cfgList::-webkit-scrollbar-thumb {
+    background: var(--bs-border-color);
+    border-radius: 2px;
 }
 
 @media (max-width: 767.98px) {
