@@ -20,8 +20,22 @@
 .rev-popover{max-width:320px}
 .rev-popover .popover-body{padding:.5rem .75rem}
 .nav-tabs .nav-link{font-size:.85rem;padding:.5rem 1rem}
+/* Mobile: bottom nav + screen switching */
 @media(max-width:991.98px){
-  .sidebar{position:static;max-height:none;margin-bottom:1.5rem}
+  .sidebar{position:static;max-height:none;margin-bottom:0}
+  .mobile-nav{position:fixed;bottom:0;left:0;right:0;z-index:1030;background:var(--bs-body-bg);border-top:1px solid var(--bs-border-color);display:flex;padding:0;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+  .mobile-nav .mnav-btn{flex:1;text-align:center;padding:8px 4px;font-size:.65rem;color:var(--bs-secondary-color);background:none;border:none;cursor:pointer;transition:color .15s}
+  .mobile-nav .mnav-btn.active{color:var(--bs-primary);font-weight:600}
+  .mobile-nav .mnav-btn i{display:block;font-size:1.2rem;margin-bottom:2px}
+  body{padding-bottom:64px}
+  .mobile-screen{display:none}
+  .mobile-screen.active{display:block}
+  #dashTabs{display:none!important}
+  .tab-pane{display:none!important}
+  .tab-pane.mob-active{display:block!important;opacity:1!important}
+}
+@media(min-width:992px){
+  .mobile-nav{display:none!important}
 }
 </style>
 {% endblock %}
@@ -206,6 +220,14 @@
   </div>
 </div>
 </div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav" id="mobileNav">
+  <button class="mnav-btn active" data-screen="params"><i class="bi bi-sliders"></i>Parameters</button>
+  <button class="mnav-btn" data-screen="overview"><i class="bi bi-speedometer2"></i>Overzicht</button>
+  <button class="mnav-btn" data-screen="compare"><i class="bi bi-bar-chart"></i>Vergelijk</button>
+  <button class="mnav-btn" data-screen="all"><i class="bi bi-table"></i>Alle</button>
+</nav>
 
 </div>
 {% endblock %}
@@ -440,8 +462,60 @@ function doRecalc(){
     .finally(()=>{spinner.classList.add('d-none')});
 }
 
+/* ===== MOBILE NAVIGATION ===== */
+const screenMap = {
+    params: {sidebar: true, pane: null},
+    overview: {sidebar: false, pane: 'paneOverview'},
+    compare: {sidebar: false, pane: 'paneCompare'},
+    all: {sidebar: false, pane: 'paneAll'},
+};
+
+function isMobile(){ return window.innerWidth < 992; }
+
+function switchMobileScreen(screen){
+    const sidebarCol = document.querySelector('.col-lg-4');
+    const contentCol = document.querySelector('.col-lg-8');
+    const panes = document.querySelectorAll('.tab-pane');
+    const btns = document.querySelectorAll('.mnav-btn');
+
+    btns.forEach(b=>b.classList.toggle('active', b.dataset.screen===screen));
+
+    if(!isMobile()) return;
+
+    const cfg = screenMap[screen];
+    sidebarCol.classList.toggle('mobile-screen', true);
+    sidebarCol.classList.toggle('active', cfg.sidebar);
+    contentCol.classList.toggle('mobile-screen', true);
+    contentCol.classList.toggle('active', !cfg.sidebar);
+
+    panes.forEach(p=>p.classList.remove('mob-active'));
+    if(cfg.pane){
+        const target = document.getElementById(cfg.pane);
+        if(target) target.classList.add('mob-active');
+    }
+}
+
+document.querySelectorAll('.mnav-btn').forEach(btn=>{
+    btn.addEventListener('click', function(){
+        switchMobileScreen(this.dataset.screen);
+        if(this.dataset.screen==='compare' && paybackChart) paybackChart.resize();
+        if(this.dataset.screen==='overview' && revenueChart) revenueChart.resize();
+    });
+});
+
+window.addEventListener('resize', ()=>{
+    if(!isMobile()){
+        const sidebarCol = document.querySelector('.col-lg-4');
+        const contentCol = document.querySelector('.col-lg-8');
+        sidebarCol.classList.remove('mobile-screen','active');
+        contentCol.classList.remove('mobile-screen','active');
+        document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('mob-active'));
+    }
+});
+
 /* ===== INIT ===== */
 renderAll();
+if(isMobile()) switchMobileScreen('params');
 
 })();
 </script>
