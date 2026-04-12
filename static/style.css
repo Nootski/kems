@@ -1,0 +1,59 @@
+:root {
+    --kems-primary: #0d6efd;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+}
+
+.step-label {
+    color: var(--bs-secondary-color);
+    transition: color .2s;
+}
+
+.step-label.active {
+    color: var(--kems-primary);
+    font-weight: 600;
+}
+
+.progress-bar {
+    transition: width .35s ease-in-out;
+}
+
+.wizard-step .card {
+    border-radius: .75rem;
+}
+
+.wizard-step .card-header {
+    background: var(--bs-body-bg);
+    border-bottom: 2px solid var(--kems-primary);
+    border-radius: .75rem .75rem 0 0;
+}
+
+.consumer-toggle:checked + label {
+    color: var(--kems-primary);
+}
+
+.table th {
+    font-weight: 600;
+    font-size: .875rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--bs-secondary-color);
+}
+
+.card.border-primary .card-header {
+    border-bottom-color: var(--kems-primary);
+}
+
+@media (max-width: 767.98px) {
+    .step-label {
+        font-size: .7rem;
+    }
+}

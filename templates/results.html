@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Resultaten - KEMS Thuisaccu Advisor{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Resultaten{% if client_name %} &mdash; {{ client_name }}{% endif %}</h2>
+        <p class="text-body-secondary mb-0">
+            Doel: <strong>{{ goal_label }}</strong> &middot;
+            Budget: <strong>&euro;{{ "{:,.0f}".format(budget) }}</strong> &middot;
+            PV: <strong>{{ pv_kwh_year|int }} kWh/jaar</strong>
+        </p>
+    </div>
+    <a href="/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Nieuwe intake</a>
+</div>
+
+{% if not configs %}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    Geen geschikte configuraties gevonden binnen de opgegeven randvoorwaarden.
+    Probeer het budget te verhogen of de ruimtebeperking te verruimen.
+</div>
+{% else %}
+
+<!-- Recommended range info -->
+{% if configs[0].details.recommended_range %}
+{% set rec = configs[0].details.recommended_range %}
+<div class="alert alert-info d-flex align-items-start">
+    <i class="bi bi-info-circle fs-4 me-3 mt-1"></i>
+    <div>
+        <strong>Aanbevolen accucapaciteit: {{ rec.min_kwh }} &ndash; {{ rec.max_kwh }} kWh</strong>
+        (optimaal: {{ rec.optimal_kwh }} kWh)<br>
+        <small class="text-body-secondary">
+            Dagelijks PV-surplus: ~{{ rec.daily_surplus_kwh }} kWh &middot;
+            Avondverbruik: ~{{ rec.evening_consumption_kwh }} kWh &middot;
+            Geschat piekverbruik: {{ configs[0].details.peak_kw }} kW
+        </small>
+    </div>
+</div>
+{% endif %}
+
+<!-- Top 3 comparison cards -->
+<div class="row g-4 mb-4">
+    {% for cfg in configs[:3] %}
+    <div class="col-lg-4">
+        <div class="card h-100 {% if loop.first %}border-primary{% endif %}">
+            {% if loop.first %}
+            <div class="card-header bg-primary text-white text-center fw-bold">
+                <i class="bi bi-trophy"></i> Aanbevolen
+            </div>
+            {% else %}
+            <div class="card-header text-center fw-bold">Alternatief {{ loop.index }}</div>
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title text-center">{{ cfg.brand }}</h5>
+                <div class="text-center mb-3">
+                    <span class="badge bg-secondary">{{ cfg.coupling }}-coupled</span>
+                    {% if cfg.notstrom %}<span class="badge bg-success">Notstrom</span>{% endif %}
+                    {% if cfg.three_phase %}<span class="badge bg-info">3-fase</span>{% endif %}
+                </div>
+                <table class="table table-sm mb-3">
+                    <tr><td class="text-body-secondary">Capaciteit</td><td class="fw-bold text-end">{{ cfg.capacity_kwh }} kWh</td></tr>
+                    <tr><td class="text-body-secondary">Bruikbaar</td><td class="text-end">{{ cfg.usable_kwh }} kWh</td></tr>
+                    <tr><td class="text-body-secondary">Omvormer</td><td class="fw-bold text-end">{{ cfg.inverter_kw }} kW</td></tr>
+                    <tr><td class="text-body-secondary">Rendement</td><td class="text-end">{{ "%.0f"|format(cfg.efficiency * 100) }}%</td></tr>
+                    <tr><td class="text-body-secondary">Garantie</td><td class="text-end">{{ cfg.warranty_years }} jaar</td></tr>
+                </table>
+                <div class="text-center border-top pt-3">
+                    <div class="fs-3 fw-bold text-primary">&euro;{{ "{:,.0f}".format(cfg.price_eur) }}</div>
+                    <div class="text-body-secondary small">excl. BTW, geinstalleerd</div>
+                </div>
+                <div class="row text-center mt-3 pt-3 border-top">
+                    <div class="col-6">
+                        <div class="fs-5 fw-bold text-success">&euro;{{ "{:,.0f}".format(cfg.annual_revenue) }}</div>
+                        <div class="text-body-secondary small">per jaar</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="fs-5 fw-bold {% if cfg.payback_years <= 7 %}text-success{% elif cfg.payback_years <= 10 %}text-warning{% else %}text-danger{% endif %}">{{ cfg.payback_years }} jaar</div>
+                        <div class="text-body-secondary small">terugverdientijd</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Revenue breakdown for recommended config -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0">Verdienmodellen &mdash; {{ configs[0].brand }} {{ configs[0].capacity_kwh }} kWh</h5></div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Beschrijving</th>
+                            <th class="text-end">EUR/jaar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total = namespace(val=0) %}
+                        {% for rev in configs[0].revenue_breakdown %}
+                        <tr class="{% if not rev.enabled %}text-body-secondary{% endif %}">
+                            <td>
+                                {{ rev.name }}
+                                {% if not rev.enabled %}<i class="bi bi-dash-circle small"></i>{% endif %}
+                            </td>
+                            <td class="small">{{ rev.description }}</td>
+                            <td class="text-end fw-bold {% if rev.enabled %}text-success{% endif %}">
+                                &euro;{{ "{:,.0f}".format(rev.annual_eur) }}
+                            </td>
+                        </tr>
+                        {% if rev.enabled %}{% set total.val = total.val + rev.annual_eur %}{% endif %}
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-success fw-bold">
+                            <td colspan="2">Totaal jaarlijks voordeel</td>
+                            <td class="text-end">&euro;{{ "{:,.0f}".format(total.val) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0">Verdeling opbrengsten</h5></div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <canvas id="revenueChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payback curve -->
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Terugverdientijd &mdash; cumulatief voordeel over 15 jaar</h5></div>
+    <div class="card-body">
+        <canvas id="paybackChart" style="max-height: 350px;"></canvas>
+    </div>
+</div>
+
+<!-- Full comparison table -->
+{% if configs|length > 3 %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Alle doorgerekende configuraties (top {{ configs|length }})</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Product</th>
+                        <th>Capaciteit</th>
+                        <th>Omvormer</th>
+                        <th>Coupling</th>
+                        <th class="text-end">Prijs</th>
+                        <th class="text-end">EUR/jaar</th>
+                        <th class="text-end">TVT</th>
+                        <th class="text-end">Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cfg in configs %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td class="fw-medium">{{ cfg.brand }}</td>
+                        <td>{{ cfg.capacity_kwh }} kWh</td>
+                        <td>{{ cfg.inverter_kw }} kW</td>
+                        <td><span class="badge bg-secondary">{{ cfg.coupling }}</span></td>
+                        <td class="text-end">&euro;{{ "{:,.0f}".format(cfg.price_eur) }}</td>
+                        <td class="text-end text-success fw-bold">&euro;{{ "{:,.0f}".format(cfg.annual_revenue) }}</td>
+                        <td class="text-end">{{ cfg.payback_years }} jr</td>
+                        <td class="text-end">{{ cfg.score }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if configs %}
+<script>
+(function() {
+    const breakdown = {{ configs[0].revenue_breakdown | tojson }};
+    const enabled = breakdown.filter(r => r.enabled && r.annual_eur > 0);
+    const labels = enabled.map(r => r.name);
+    const data = enabled.map(r => r.annual_eur);
+    const colors = ['#0d6efd','#198754','#ffc107','#dc3545','#6f42c1','#0dcaf0'];
+
+    new Chart(document.getElementById('revenueChart'), {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, data.length),
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { padding: 15 } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `€${ctx.parsed.toLocaleString('nl-NL', {minimumFractionDigits: 0})}/jaar`
+                    }
+                }
+            }
+        }
+    });
+
+    // Payback chart
+    const configs = {{ configs[:3] | tojson }};
+    const years = Array.from({length: 16}, (_, i) => i);
+    const datasets = configs.map((cfg, i) => ({
+        label: `${cfg.brand} ${cfg.capacity_kwh} kWh`,
+        data: years.map(y => -cfg.price_eur + y * cfg.annual_revenue),
+        borderColor: colors[i],
+        backgroundColor: 'transparent',
+        tension: 0.1,
+        pointRadius: 2,
+    }));
+    datasets.push({
+        label: 'Break-even',
+        data: years.map(() => 0),
+        borderColor: '#6c757d',
+        borderDash: [5, 5],
+        backgroundColor: 'transparent',
+        pointRadius: 0,
+    });
+
+    new Chart(document.getElementById('paybackChart'), {
+        type: 'line',
+        data: { labels: years.map(y => `Jaar ${y}`), datasets: datasets },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: €${ctx.parsed.y.toLocaleString('nl-NL', {minimumFractionDigits: 0})}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { callback: v => `€${v.toLocaleString('nl-NL')}` },
+                    title: { display: true, text: 'Cumulatief voordeel (EUR)' }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}
