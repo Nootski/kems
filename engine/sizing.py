@@ -155,24 +155,49 @@ def recommended_capacity_range(
     }
 
 
-def recommended_inverter_kw(
+def recommended_inverter_range(
     peak_kw: float,
     battery_kwh: float,
     pv_kwp: float = 0,
-    coupling: str = "AC",
-) -> float:
+    annual_consumption_kwh: float = 4000,
+    goal: str = "balanced",
+) -> dict:
     """
-    Recommend inverter power.
-    For AC-coupling: must handle peak demand independently.
-    For DC-coupling: works alongside existing PV inverter.
-    """
-    min_for_peak = peak_kw * 0.6
-    min_for_charge_rate = battery_kwh / 3
-    min_for_pv = pv_kwp * 0.5 if coupling == "DC" else 0
+    Recommend inverter power range (min / optimal / max kW).
 
-    recommended = max(min_for_peak, min_for_charge_rate, min_for_pv, 3.0)
-    standard_sizes = [3, 5, 6, 8, 10, 12, 15, 17, 20, 25, 30]
-    for size in standard_sizes:
-        if size >= recommended:
-            return float(size)
-    return float(standard_sizes[-1])
+    Drivers:
+    - Peak shaving: need enough kW to cover peaks (at least ~50-60% of peak)
+    - Charge rate: battery should charge in 2-4h from PV surplus
+    - Arbitrage throughput: faster charge/discharge = more spread captured
+    - PV clipping: in DC-coupled, inverter must handle PV peak output
+    - Diminishing returns: beyond optimal, extra kW adds cost but little revenue
+    """
+    min_for_peak = peak_kw * 0.4
+    min_for_charge = battery_kwh / 4
+    min_kw = max(3.0, min_for_peak, min_for_charge)
+
+    opt_for_peak = peak_kw * 0.6
+    opt_for_charge = battery_kwh / 2.5
+    opt_for_arb = battery_kwh / 2
+    optimal_kw = max(5.0, opt_for_peak, opt_for_charge)
+
+    if goal == "peak_shaving":
+        optimal_kw = max(optimal_kw, peak_kw * 0.7)
+    elif goal == "max_rendement":
+        optimal_kw = max(optimal_kw, opt_for_arb)
+    elif goal == "max_autarkie":
+        optimal_kw = max(optimal_kw, pv_kwp * 0.5 if pv_kwp > 0 else optimal_kw)
+
+    max_useful = max(optimal_kw, peak_kw * 0.8)
+    max_kw = min(max_useful, peak_kw)
+
+    return {
+        "min_kw": round(min_kw, 1),
+        "optimal_kw": round(optimal_kw, 1),
+        "max_kw": round(max_kw, 1),
+        "reasoning": {
+            "peak_shaving": round(opt_for_peak, 1),
+            "charge_rate": round(opt_for_charge, 1),
+            "arbitrage": round(opt_for_arb, 1),
+        },
+    }

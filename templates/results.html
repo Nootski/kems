@@ -181,7 +181,13 @@ function renderRecAlert(){
     const c=allConfigs[0];if(!c||!c.details||!c.details.recommended_range){document.getElementById('recAlert').classList.add('d-none');return}
     document.getElementById('recAlert').classList.remove('d-none');
     const r=c.details.recommended_range;
-    document.getElementById('recText').innerHTML=`<strong>Aanbevolen accucapaciteit: ${r.min_kwh} &ndash; ${r.max_kwh} kWh</strong> (optimaal: ${r.optimal_kwh} kWh)<br><small class="text-body-secondary">Gem. PV-surplus: ~${r.daily_surplus_kwh} kWh/dag &middot; Piekdag surplus: ~${r.peak_day_surplus_kwh||'?'} kWh &middot; Avondverbruik: ~${r.evening_consumption_kwh} kWh &middot; Piekverbruik: ${c.details.peak_kw} kW</small>`;
+    const inv=c.details.recommended_inverter||{};
+    document.getElementById('recText').innerHTML=`
+        <div class="row g-3 mb-2">
+            <div class="col-md-6"><strong>Accucapaciteit: ${r.min_kwh} &ndash; ${r.max_kwh} kWh</strong> <span class="text-body-secondary">(optimaal: ${r.optimal_kwh} kWh)</span></div>
+            <div class="col-md-6"><strong>Omvormer: ${inv.min_kw||'?'} &ndash; ${inv.max_kw||'?'} kW</strong> <span class="text-body-secondary">(optimaal: ${inv.optimal_kw||'?'} kW)</span></div>
+        </div>
+        <small class="text-body-secondary">Gem. surplus: ~${r.daily_surplus_kwh} kWh/dag &middot; Piekdag: ~${r.peak_day_surplus_kwh||'?'} kWh &middot; Avondverbruik: ~${r.evening_consumption_kwh} kWh &middot; Piekverbruik: ${c.details.peak_kw} kW</small>`;
 }
 
 function cardHTML(cfg, idx){

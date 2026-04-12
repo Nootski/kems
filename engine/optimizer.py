@@ -11,7 +11,7 @@ from engine.products import get_all_configs, get_grid_cost
 from engine.revenue import RevenueInputs, calculate_all, total_annual_revenue
 from engine.sizing import (
     recommended_capacity_range,
-    recommended_inverter_kw,
+    recommended_inverter_range,
     target_connection_with_battery,
     estimate_peak_demand,
 )
@@ -111,6 +111,11 @@ def optimize(inputs: dict) -> list[OptimizedConfig]:
 
     rec = recommended_capacity_range(pv_kwh, annual_kwh, sc_pct, peak_kw, goal)
 
+    pv_kwp = inputs.get("pv_kwp", 0)
+    inv_rec = recommended_inverter_range(
+        peak_kw, rec["optimal_kwh"], pv_kwp, annual_kwh, goal,
+    )
+
     grid_current = get_grid_cost(netbeheerder, current_conn) or 1923
     all_configs = get_all_configs()
 
@@ -168,8 +173,9 @@ def optimize(inputs: dict) -> list[OptimizedConfig]:
         payback = cfg["price_eur"] / annual_rev if annual_rev > 0 else 999
 
         within_rec = rec["min_kwh"] <= cfg["capacity_kwh"] <= rec["max_kwh"]
+        inverter_in_range = inv_rec["min_kw"] <= cfg["inverter_kw"] <= inv_rec["max_kw"]
 
-        score = _calc_score(cfg, annual_rev, payback, rec, goal, within_rec)
+        score = _calc_score(cfg, annual_rev, payback, rec, inv_rec, goal, within_rec, inverter_in_range)
 
         results.append(OptimizedConfig(
             product=cfg["product"],
@@ -204,6 +210,7 @@ def optimize(inputs: dict) -> list[OptimizedConfig]:
             within_recommendation=within_rec,
             details={
                 "recommended_range": rec,
+                "recommended_inverter": inv_rec,
                 "target_connection": tgt_conn,
                 "peak_kw": round(peak_kw, 1),
             },
@@ -215,15 +222,13 @@ def optimize(inputs: dict) -> list[OptimizedConfig]:
 
 def _calc_score(
     cfg: dict, annual_rev: float, payback: float,
-    rec: dict, goal: str, within_rec: bool,
+    rec: dict, inv_rec: dict, goal: str,
+    within_rec: bool, inverter_in_range: bool,
 ) -> float:
     """
     Compute a weighted score to rank configurations.
-    Higher = better. Incorporates all 10 kernvariabelen:
-    1. Capaciteit, 2. Vermogen, 3. 3-fase, 4. AC/DC coupling
-    (filtered pre-score), 5. EMS, 6. Integratie/openheid,
-    7. Levensduur, 8. Efficientie, 9. Modulariteit, 10. Backup
-    (filtered pre-score).
+    Higher = better. Incorporates all 10 kernvariabelen plus
+    inverter right-sizing (too big = expensive, too small = limited revenue).
     """
     if payback >= 999:
         return -1000
@@ -236,6 +241,18 @@ def _calc_score(
     integration_score = cfg.get("integration_score", 1) * 3
     modularity_score = cfg.get("modularity_score", 1) * 2
 
+    inv_kw = cfg["inverter_kw"]
+    inv_opt = inv_rec["optimal_kw"]
+    inv_min = inv_rec["min_kw"]
+    if inv_kw < inv_min:
+        inverter_score = -15
+    elif inverter_in_range:
+        closeness = 1 - abs(inv_kw - inv_opt) / max(inv_opt, 1)
+        inverter_score = 10 * max(0, closeness)
+    else:
+        overshoot = (inv_kw - inv_rec["max_kw"]) / max(inv_opt, 1)
+        inverter_score = -5 * min(overshoot, 2)
+
     if goal == "max_rendement":
         payback_score *= 2
         revenue_score *= 0.8
@@ -244,12 +261,13 @@ def _calc_score(
         revenue_score += capacity_bonus
         payback_score *= 0.5
     elif goal == "peak_shaving":
-        inverter_bonus = min(cfg["inverter_kw"] / 20, 1.5) * 20
-        revenue_score += inverter_bonus
+        peak_inv_bonus = min(inv_kw / inv_opt, 1.5) * 15
+        revenue_score += peak_inv_bonus
 
     return (
         payback_score + revenue_score + rec_bonus + efficiency_score
         + cycle_life_score + integration_score + modularity_score
+        + inverter_score
     )
 
 
