@@ -78,3 +78,48 @@ main {
         font-size: .7rem;
     }
 }
+
+/* Theme toggle icons */
+[data-bs-theme="light"] .theme-icon-dark,
+[data-bs-theme="dark"] .theme-icon-light {
+    display: none;
+}
+
+#theme-toggle {
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: .25rem .5rem;
+}
+
+/* Dark-mode tuning */
+[data-bs-theme="dark"] {
+    --kems-primary: #4d9fff;
+}
+
+[data-bs-theme="dark"] .wizard-step .card-header {
+    background: var(--bs-tertiary-bg);
+}
+
+/* Feedback widget messages */
+.fb-msg {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    max-width: 85%;
+}
+.fb-msg-dev {
+    background: var(--bs-primary-bg-subtle);
+    color: var(--bs-body-color);
+    align-self: flex-start;
+}
+.fb-msg-user {
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+    align-self: flex-end;
+}
+.fb-msg-meta {
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--bs-secondary-color);
+    margin-bottom: 2px;
+}

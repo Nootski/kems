@@ -1,0 +1,9 @@
+{
+  "workbench.panel.defaultLocation": "right",
+  "workbench.sideBar.location": "left",
+  "workbench.secondarySideBar.defaultVisibility": "visible",
+  "workbench.auxiliaryBar.visible": true,
+  "workbench.startupEditor": "none",
+  "workbench.view.alwaysShowHeaderActions": true,
+  "github.copilot.chat.defaultAgent": "claude"
+}

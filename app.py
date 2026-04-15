@@ -11,6 +11,16 @@ from engine.sizing import estimate_pv_yield
 
 app = Flask(__name__)
 
+try:
+    __version__ = (Path(__file__).parent / "VERSION").read_text().strip()
+except OSError:
+    __version__ = "0.0.0"
+
+
+@app.context_processor
+def _inject_version():
+    return {"app_version": __version__}
+
 DATA_DIR = Path(os.environ.get(
     "KEMS_DATA_DIR",
     Path(__file__).parent / "data",
@@ -292,4 +302,5 @@ def reply_feedback():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5050)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(debug=debug, port=5050)  # nosec B201
